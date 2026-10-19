@@ -21,10 +21,31 @@ Under development.
 - Python 3.13+
 - uv
 
+
 ## Development Setup
 
 ```powershell
 uv sync
+```
+
+## Usage
+
+Display the available commands:
+
+```powershell
+uv run deploypilot --help
+```
+
+Display the application version:
+
+```powershell
+uv run deploypilot --version
+```
+
+Alternatively, run the application as a Python module:
+
+```powershell
+uv run python -m deploypilot --help
 ```
 
 ## Quality Checks
