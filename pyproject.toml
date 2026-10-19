@@ -41,3 +41,6 @@ select = ["E", "F", "I", "B", "UP"]
 python_version = "3.13"
 mypy_path = "src"
 strict = true
+
+[project.scripts]
+deploypilot = "deploypilot.cli:app"
