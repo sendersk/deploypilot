@@ -1,15 +1,18 @@
 """Command-line interface for DeployPilot."""
 
+from pathlib import Path
 from typing import Annotated
 
 import typer
 
 from deploypilot import __version__
+from deploypilot.loader import WorkflowLoadError, load_workflow
 
 app = typer.Typer(
     name="deploypilot",
     help="Orchestrate deployment workflows.",
     no_args_is_help=False,
+    invoke_without_command=True,
     add_completion=False,
 )
 
@@ -21,7 +24,7 @@ def version_callback(value: bool) -> None:
         raise typer.Exit()
 
 
-@app.callback(invoke_without_command=True)
+@app.callback()
 def main(
     ctx: typer.Context,
     version: Annotated[
@@ -35,6 +38,30 @@ def main(
     ] = None,
 ) -> None:
     """Manage and execute deployment workflows."""
-    if ctx.invoked_subcommand is None and version is None:
+    if ctx.invoked_subcommand is None and not ctx.resilient_parsing:
         typer.echo(ctx.get_help())
         raise typer.Exit(code=0)
+
+
+@app.command()
+def validate(
+    workflow_file: Annotated[
+        Path,
+        typer.Argument(
+            help="Path to the YAML workflow configuration.",
+            exists=False,
+            dir_okay=False,
+            resolve_path=True,
+        ),
+    ],
+) -> None:
+    """Validate a workflow configuration without executing it."""
+    try:
+        workflow = load_workflow(workflow_file)
+    except WorkflowLoadError as exc:
+        typer.echo(f"Error: {exc}", err=True)
+        raise typer.Exit(code=1) from exc
+
+    typer.echo(f"Workflow '{workflow.name}' is valid.")
+    typer.echo(f"Deployment steps: {len(workflow.steps)}")
+    typer.echo(f"Rollback steps: {len(workflow.rollback_steps)}")

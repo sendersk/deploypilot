@@ -48,6 +48,17 @@ Alternatively, run the application as a Python module:
 uv run python -m deploypilot --help
 ```
 
+Validate a workflow configuration without executing deployment steps:
+
+```powershell
+uv run deploypilot validate resources/example-workflow.yaml
+```
+
+A successful validation displays the workflow name and the number of
+deployment and rollback steps. Invalid configurations return a nonzero
+exit code.
+
+
 ## Quality Checks
 
 ```powershell
