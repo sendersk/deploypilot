@@ -1,0 +1,29 @@
+name: example-deployment
+
+steps:
+  - name: verify-python
+    type: command
+    command:
+      - python
+      - --version
+    timeout: 10
+
+  - name: check-service
+    type: http_health_check
+    url: https://example.com/
+    timeout: 15
+
+  - name: verify-deployment
+    type: verification
+    command:
+      - python
+      - --version
+    timeout: 10
+
+rollback_steps:
+  - name: rollback-placeholder
+    type: command
+    command:
+      - python
+      - --version
+    timeout: 10
