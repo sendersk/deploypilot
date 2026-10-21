@@ -100,3 +100,16 @@ steps:
     assert "Workflow 'test-deployment' is valid." in result.output
     assert "Deployment steps: 1" in result.output
     assert "Rollback steps: 0" in result.output
+
+
+def test_validate_example_workflow() -> None:
+    """Verify that the bundled example workflow is valid."""
+    project_root = Path(__file__).resolve().parents[1]
+    workflow_file = project_root / "resources" / "example-workflow.yaml"
+
+    result = runner.invoke(app, ["validate", str(workflow_file)])
+
+    assert result.exit_code == 0
+    assert "Workflow 'example-deployment' is valid." in result.output
+    assert "Deployment steps: 3" in result.output
+    assert "Rollback steps: 1" in result.output
