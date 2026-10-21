@@ -76,3 +76,27 @@ steps:
 
     assert result.exit_code == 0
     assert "is valid" in result.output
+
+
+def test_validate_displays_workflow_summary(tmp_path: Path) -> None:
+    """Verify that validation displays the workflow summary."""
+    workflow_file = tmp_path / "workflow.yaml"
+    workflow_file.write_text(
+        """
+name: test-deployment
+steps:
+  - name: check-python
+    type: command
+    command:
+      - python
+      - --version
+""".strip(),
+        encoding="utf-8",
+    )
+
+    result = runner.invoke(app, ["validate", str(workflow_file)])
+
+    assert result.exit_code == 0
+    assert "Workflow 'test-deployment' is valid." in result.output
+    assert "Deployment steps: 1" in result.output
+    assert "Rollback steps: 0" in result.output
