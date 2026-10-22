@@ -113,3 +113,26 @@ def test_validate_example_workflow() -> None:
     assert "Workflow 'example-deployment' is valid." in result.output
     assert "Deployment steps: 3" in result.output
     assert "Rollback steps: 1" in result.output
+
+
+def test_validate_rejects_invalid_workflow_configuration(
+    tmp_path: Path,
+) -> None:
+    """Reject invalid workflow configuration and report an error."""
+    workflow_file = tmp_path / "invalid-workflow.yaml"
+    workflow_file.write_text(
+        """
+name: invalid-deployment
+steps:
+  - name: missing-command
+    type: command
+""".strip(),
+        encoding="utf-8",
+    )
+
+    result = runner.invoke(app, ["validate", str(workflow_file)])
+
+    assert result.exit_code == 1
+    assert "Error:" in result.output
+    assert "failed validation" in result.output
+    assert "is valid" not in result.output
