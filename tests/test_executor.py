@@ -37,16 +37,33 @@ def test_execute_command_step_uses_command_runner() -> None:
     )
 
 
-def test_execute_rejects_http_health_check() -> None:
-    """Reject a step type that this executor does not support yet."""
+
+def test_execute_http_health_check_uses_health_checker() -> None:
+    """Pass HTTP health check details to the health checker."""
     step = DeploymentStep(
         name="check-service",
         type=StepType.HTTP_HEALTH_CHECK,
         url="https://example.com/",
+        timeout=12,
     )
+    expected_result = StepResult(
+        step_name="check-service",
+        status=StepStatus.SUCCEEDED,
+        duration_seconds=0.2,
+        message="HTTP health check returned status 200.",
+    )
+    health_checker = MagicMock()
+    health_checker.check.return_value = expected_result
 
-    with pytest.raises(ValueError, match="Unsupported step type"):
-        StepExecutor().execute(step)
+    executor = StepExecutor(health_checker=health_checker)
+    result = executor.execute(step)
+
+    assert result == expected_result
+    health_checker.check.assert_called_once_with(
+        step_name="check-service",
+        url="https://example.com/",
+        timeout=12,
+    )
 
 
 def test_execute_rejects_verification_step() -> None:
