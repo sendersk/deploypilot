@@ -20,7 +20,7 @@ class StepExecutor:
 
     def execute(self, step: DeploymentStep) -> StepResult:
         """Execute a supported step and return its result."""
-        if step.type == StepType.COMMAND:
+        if step.type in (StepType.COMMAND, StepType.VERIFICATION):
             if step.command is None:
                 raise ValueError(
                     f"Command step '{step.name}' has no command configured."

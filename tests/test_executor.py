@@ -2,8 +2,6 @@
 
 from unittest.mock import MagicMock
 
-import pytest
-
 from deploypilot.executor import StepExecutor
 from deploypilot.models import DeploymentStep, StepType
 from deploypilot.results import StepResult, StepStatus
@@ -66,13 +64,30 @@ def test_execute_http_health_check_uses_health_checker() -> None:
     )
 
 
-def test_execute_rejects_verification_step() -> None:
-    """Reject verification steps until their executor is implemented."""
+def test_execute_verification_step_uses_command_runner() -> None:
+    """Execute verification steps through the command runner."""
     step = DeploymentStep(
         name="verify-deployment",
         type=StepType.VERIFICATION,
         command=["python", "--version"],
+        timeout=15,
     )
+    expected_result = StepResult(
+        step_name="verify-deployment",
+        status=StepStatus.SUCCEEDED,
+        duration_seconds=0.2,
+        message="Command completed successfully.",
+        exit_code=0,
+    )
+    command_runner = MagicMock()
+    command_runner.run.return_value = expected_result
 
-    with pytest.raises(ValueError, match="Unsupported step type"):
-        StepExecutor().execute(step)
+    executor = StepExecutor(command_runner=command_runner)
+    result = executor.execute(step)
+
+    assert result == expected_result
+    command_runner.run.assert_called_once_with(
+        step_name="verify-deployment",
+        command=["python", "--version"],
+        timeout=15,
+    )
