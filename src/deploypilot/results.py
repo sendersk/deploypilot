@@ -40,6 +40,7 @@ class WorkflowResult(BaseModel):
 
     workflow_name: str = Field(min_length=1)
     steps: list[StepResult]
+    rollback_steps: list[StepResult] = Field(default_factory=list)
     status: WorkflowStatus
     duration_seconds: float = Field(ge=0)
 

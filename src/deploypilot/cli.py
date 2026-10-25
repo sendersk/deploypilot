@@ -89,6 +89,7 @@ def run(
     typer.echo(f"Workflow: {result.workflow_name}")
     typer.echo(f"Status: {result.status.value}")
     typer.echo(f"Duration: {result.duration_seconds:.2f}s")
+
     typer.echo("Steps:")
 
     for step in result.steps:
@@ -96,6 +97,16 @@ def run(
         typer.echo(f"  [{step.status.value}] {step.step_name} ({duration})")
         if step.message:
             typer.echo(f"    {step.message}")
+
+    if result.rollback_steps:
+        typer.echo("Rollback:")
+        for step in result.rollback_steps:
+            duration = f"{step.duration_seconds:.2f}s"
+            typer.echo(
+                f"  [{step.status.value}] {step.step_name} ({duration})"
+            )
+            if step.message:
+                typer.echo(f"    {step.message}")
 
     if result.status == WorkflowStatus.FAILED:
         raise typer.Exit(code=1)
