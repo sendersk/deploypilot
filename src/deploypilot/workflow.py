@@ -1,4 +1,7 @@
+
 """Execute deployment workflows sequentially."""
+
+import logging
 
 from deploypilot.executor import StepExecutor
 from deploypilot.models import DeploymentStep, WorkflowConfig
@@ -10,6 +13,8 @@ from deploypilot.results import (
     WorkflowStatus,
 )
 
+logger = logging.getLogger(__name__)
+
 
 class WorkflowExecutor:
     """Execute deployment workflows and handle configured rollback steps."""
@@ -20,6 +25,8 @@ class WorkflowExecutor:
 
     def execute(self, workflow: WorkflowConfig) -> WorkflowResult:
         """Execute a workflow and roll back after a required failure."""
+        logger.info("Starting workflow '%s'.", workflow.name)
+
         deployment_results = self._execute_steps(workflow.steps)
         required_step_names = {
             step.name for step in workflow.steps if step.required
@@ -35,13 +42,11 @@ class WorkflowExecutor:
             deployment_result.status == WorkflowStatus.FAILED
             and workflow.rollback_steps
         ):
+            logger.warning(
+                "Deployment failed for workflow '%s'; starting rollback.",
+                workflow.name,
+            )
             rollback_results = self._execute_steps(workflow.rollback_steps)
-
-
-        total_duration = sum(
-            result.duration_seconds
-            for result in [*deployment_results, *rollback_results]
-        )
 
         rollback_status = RollbackStatus.NOT_REQUIRED
         if rollback_results:
@@ -54,7 +59,12 @@ class WorkflowExecutor:
                 else RollbackStatus.SUCCEEDED
             )
 
-        return WorkflowResult(
+        total_duration = sum(
+            result.duration_seconds
+            for result in [*deployment_results, *rollback_results]
+        )
+
+        result = WorkflowResult(
             workflow_name=workflow.name,
             steps=deployment_results,
             rollback_steps=rollback_results,
@@ -63,6 +73,14 @@ class WorkflowExecutor:
             duration_seconds=total_duration,
         )
 
+        logger.info(
+            "Workflow '%s' finished with status '%s' in %.2f seconds.",
+            result.workflow_name,
+            result.status.value,
+            result.duration_seconds,
+        )
+
+        return result
 
     def _execute_steps(
         self,
@@ -74,11 +92,32 @@ class WorkflowExecutor:
 
         for step in steps:
             if stop_execution:
-                results.append(self._skipped_result(step))
+                skipped_result = self._skipped_result(step)
+                results.append(skipped_result)
+                logger.info(
+                    "Skipping step '%s' because a previous required step "
+                    "failed.",
+                    step.name,
+                )
                 continue
 
+            logger.info("Starting step '%s'.", step.name)
             result = self._step_executor.execute(step)
             results.append(result)
+
+            if result.status == StepStatus.FAILED:
+                logger.error(
+                    "Step '%s' failed: %s",
+                    step.name,
+                    result.message or "No error details available.",
+                )
+            else:
+                logger.info(
+                    "Step '%s' finished with status '%s' in %.2f seconds.",
+                    step.name,
+                    result.status.value,
+                    result.duration_seconds,
+                )
 
             if result.status == StepStatus.FAILED and step.required:
                 stop_execution = True
