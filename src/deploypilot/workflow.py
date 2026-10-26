@@ -3,6 +3,7 @@
 from deploypilot.executor import StepExecutor
 from deploypilot.models import DeploymentStep, WorkflowConfig
 from deploypilot.results import (
+    RollbackStatus,
     StepResult,
     StepStatus,
     WorkflowResult,
@@ -36,18 +37,32 @@ class WorkflowExecutor:
         ):
             rollback_results = self._execute_steps(workflow.rollback_steps)
 
+
         total_duration = sum(
             result.duration_seconds
             for result in [*deployment_results, *rollback_results]
         )
 
+        rollback_status = RollbackStatus.NOT_REQUIRED
+        if rollback_results:
+            rollback_status = (
+                RollbackStatus.FAILED
+                if any(
+                    step.status != StepStatus.SUCCEEDED
+                    for step in rollback_results
+                )
+                else RollbackStatus.SUCCEEDED
+            )
+
         return WorkflowResult(
             workflow_name=workflow.name,
             steps=deployment_results,
             rollback_steps=rollback_results,
+            rollback_status=rollback_status,
             status=deployment_result.status,
             duration_seconds=total_duration,
         )
+
 
     def _execute_steps(
         self,

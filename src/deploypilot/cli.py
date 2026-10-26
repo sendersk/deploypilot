@@ -99,6 +99,7 @@ def run(
             typer.echo(f"    {step.message}")
 
     if result.rollback_steps:
+        typer.echo(f"Rollback status: {result.rollback_status.value}")
         typer.echo("Rollback:")
         for step in result.rollback_steps:
             duration = f"{step.duration_seconds:.2f}s"

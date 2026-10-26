@@ -33,6 +33,14 @@ class WorkflowStatus(StrEnum):
     FAILED = "failed"
 
 
+class RollbackStatus(StrEnum):
+    """Represent the overall outcome of rollback execution."""
+
+    NOT_REQUIRED = "not_required"
+    SUCCEEDED = "succeeded"
+    FAILED = "failed"
+
+
 class WorkflowResult(BaseModel):
     """Represent the overall result of a deployment workflow."""
 
@@ -41,6 +49,7 @@ class WorkflowResult(BaseModel):
     workflow_name: str = Field(min_length=1)
     steps: list[StepResult]
     rollback_steps: list[StepResult] = Field(default_factory=list)
+    rollback_status: RollbackStatus = RollbackStatus.NOT_REQUIRED
     status: WorkflowStatus
     duration_seconds: float = Field(ge=0)
 

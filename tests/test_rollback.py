@@ -4,6 +4,7 @@ from unittest.mock import MagicMock
 
 from deploypilot.models import DeploymentStep, StepType, WorkflowConfig
 from deploypilot.results import (
+    RollbackStatus,
     StepResult,
     StepStatus,
     WorkflowStatus,
@@ -114,3 +115,59 @@ def test_rollback_stops_after_required_rollback_failure() -> None:
         step.status for step in result.rollback_steps
     ] == [StepStatus.FAILED, StepStatus.SKIPPED]
     assert step_executor.execute.call_count == 2
+
+
+
+def test_successful_rollback_has_succeeded_status() -> None:
+    """Report a successful rollback while preserving deployment failure."""
+    workflow = WorkflowConfig(
+        name="test-workflow",
+        steps=[make_step("deploy")],
+        rollback_steps=[make_step("rollback")],
+    )
+    step_executor = MagicMock()
+    step_executor.execute.side_effect = [
+        make_result("deploy", StepStatus.FAILED),
+        make_result("rollback", StepStatus.SUCCEEDED),
+    ]
+
+    result = WorkflowExecutor(step_executor).execute(workflow)
+
+    assert result.status == WorkflowStatus.FAILED
+    assert result.rollback_status == RollbackStatus.SUCCEEDED
+
+
+def test_failed_rollback_has_failed_status() -> None:
+    """Report a failed rollback separately from deployment status."""
+    workflow = WorkflowConfig(
+        name="test-workflow",
+        steps=[make_step("deploy")],
+        rollback_steps=[make_step("rollback")],
+    )
+    step_executor = MagicMock()
+    step_executor.execute.side_effect = [
+        make_result("deploy", StepStatus.FAILED),
+        make_result("rollback", StepStatus.FAILED),
+    ]
+
+    result = WorkflowExecutor(step_executor).execute(workflow)
+
+    assert result.status == WorkflowStatus.FAILED
+    assert result.rollback_status == RollbackStatus.FAILED
+
+
+def test_unconfigured_rollback_has_not_required_status() -> None:
+    """Report that rollback was not required when no steps are configured."""
+    workflow = WorkflowConfig(
+        name="test-workflow",
+        steps=[make_step("deploy")],
+    )
+    step_executor = MagicMock()
+    step_executor.execute.return_value = make_result(
+        "deploy",
+        StepStatus.SUCCEEDED,
+    )
+
+    result = WorkflowExecutor(step_executor).execute(workflow)
+
+    assert result.rollback_status == RollbackStatus.NOT_REQUIRED
