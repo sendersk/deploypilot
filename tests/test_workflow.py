@@ -1,6 +1,6 @@
 """Tests for sequential workflow execution."""
 
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 from deploypilot.models import DeploymentStep, StepType, WorkflowConfig
 from deploypilot.results import (
@@ -115,3 +115,38 @@ def test_execute_returns_summary_for_empty_workflow_steps() -> None:
     assert result.workflow_name == "empty-workflow"
     assert result.status == WorkflowStatus.SUCCEEDED
     assert result.steps == []
+
+
+def test_workflow_timeout_prevents_starting_later_steps() -> None:
+    """Skip steps that have not started before the deadline."""
+    workflow = WorkflowConfig(
+        name="timeout-workflow",
+        steps=[make_step("step-one"), make_step("step-two")],
+    )
+    step_executor = MagicMock()
+    step_executor.execute.return_value = make_result(
+        "step-one",
+        StepStatus.SUCCEEDED,
+    )
+    executor = WorkflowExecutor(step_executor, timeout=1.0)
+
+    with patch(
+        "deploypilot.workflow.time.monotonic",
+        side_effect=[100.0, 102.0],
+    ):
+        result = executor.execute(workflow)
+
+    assert result.status == WorkflowStatus.FAILED
+    assert [step.status for step in result.steps] == [
+        StepStatus.SUCCEEDED,
+        StepStatus.FAILED,
+    ]
+    assert step_executor.execute.call_count == 1
+
+
+def test_workflow_rejects_non_positive_timeout() -> None:
+    """Reject a zero or negative workflow timeout."""
+    import pytest
+
+    with pytest.raises(ValueError, match="greater than zero"):
+        WorkflowExecutor(timeout=0)
