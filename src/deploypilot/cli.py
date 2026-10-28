@@ -84,6 +84,13 @@ def run(
             help="Set the logging level.",
         ),
     ] = "INFO",
+    output_json: Annotated[
+        Path | None,
+        typer.Option(
+            "--output-json",
+            help="Write the workflow execution summary to a JSON file.",
+        ),
+    ] = None,
 ) -> None:
     """Execute a deployment workflow."""
     try:
@@ -95,6 +102,22 @@ def run(
     configure_logging(log_level)
 
     result = WorkflowExecutor().execute(workflow)
+
+    if output_json is not None:
+        try:
+            output_json.parent.mkdir(parents=True, exist_ok=True)
+            output_json.write_text(
+                result.model_dump_json(indent=2) + "\n",
+                encoding="utf-8",
+            )
+        except OSError as exc:
+            typer.echo(
+                f"Error: unable to write JSON report: {exc}",
+                err=True,
+            )
+            raise typer.Exit(code=1) from exc
+
+        typer.echo(f"JSON report saved to: {output_json}")
 
     typer.echo(f"Workflow: {result.workflow_name}")
     typer.echo(f"Status: {result.status.value}")

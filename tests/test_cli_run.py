@@ -1,5 +1,6 @@
 """Tests for the workflow execution CLI command."""
 
+import json
 from pathlib import Path
 from unittest.mock import MagicMock
 
@@ -162,3 +163,133 @@ def test_run_rejects_unsupported_log_level(tmp_path: Path) -> None:
 
     assert response.exit_code != 0
     assert "TRACE" in response.output
+
+
+def test_run_writes_json_report(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    """Write the workflow summary to the requested JSON file."""
+    workflow_file = create_workflow_file(tmp_path)
+    report_file = tmp_path / "reports" / "deployment.json"
+
+    result = WorkflowResult(
+        workflow_name="test-workflow",
+        steps=[
+            StepResult(
+                step_name="test-step",
+                status=StepStatus.SUCCEEDED,
+                duration_seconds=0.25,
+                message="Command completed successfully.",
+                exit_code=0,
+            )
+        ],
+        status=WorkflowStatus.SUCCEEDED,
+        duration_seconds=0.25,
+    )
+    executor = MagicMock()
+    executor.execute.return_value = result
+    monkeypatch.setattr(
+        "deploypilot.cli.WorkflowExecutor",
+        lambda: executor,
+    )
+
+    response = runner.invoke(
+        app,
+        [
+            "run",
+            str(workflow_file),
+            "--output-json",
+            str(report_file),
+        ],
+    )
+
+    assert response.exit_code == 0
+    assert report_file.is_file()
+    report = json.loads(report_file.read_text(encoding="utf-8"))
+    assert report["workflow_name"] == "test-workflow"
+    assert report["status"] == "succeeded"
+    assert report["steps"][0]["step_name"] == "test-step"
+    assert report["rollback_steps"] == []
+    assert report["rollback_status"] == "not_required"
+
+
+def test_run_writes_json_report_when_workflow_fails(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    """Preserve a failure report when execution fails."""
+    workflow_file = create_workflow_file(tmp_path)
+    report_file = tmp_path / "deployment.json"
+
+    result = WorkflowResult(
+        workflow_name="test-workflow",
+        steps=[
+            StepResult(
+                step_name="test-step",
+                status=StepStatus.FAILED,
+                duration_seconds=0.1,
+                message="Command returned a non-zero exit code.",
+                exit_code=1,
+            )
+        ],
+        status=WorkflowStatus.FAILED,
+        duration_seconds=0.1,
+    )
+    executor = MagicMock()
+    executor.execute.return_value = result
+    monkeypatch.setattr(
+        "deploypilot.cli.WorkflowExecutor",
+        lambda: executor,
+    )
+
+    response = runner.invoke(
+        app,
+        [
+            "run",
+            str(workflow_file),
+            "--output-json",
+            str(report_file),
+        ],
+    )
+
+    assert response.exit_code == 1
+    assert report_file.is_file()
+    report = json.loads(report_file.read_text(encoding="utf-8"))
+    assert report["status"] == "failed"
+
+
+def test_run_reports_json_write_error(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    """Return an error if the JSON report cannot be written."""
+    workflow_file = create_workflow_file(tmp_path)
+    report_path = tmp_path / "missing-parent" / "report.json"
+
+    result = WorkflowResult(
+        workflow_name="test-workflow",
+        steps=[],
+        status=WorkflowStatus.SUCCEEDED,
+        duration_seconds=0.0,
+    )
+    executor = MagicMock()
+    executor.execute.return_value = result
+    monkeypatch.setattr(
+        "deploypilot.cli.WorkflowExecutor",
+        lambda: executor,
+    )
+
+    def fail_mkdir(*args, **kwargs) -> None:
+        """Simulate a report directory creation failure."""
+        raise OSError("Simulated filesystem error.")
+
+    monkeypatch.setattr(Path, "mkdir", fail_mkdir)
+
+    response = runner.invoke(
+        app,
+        ["run", str(workflow_file), "--output-json", str(report_path)],
+    )
+
+    assert response.exit_code == 1
+    assert "Error: unable to write JSON report" in response.output
