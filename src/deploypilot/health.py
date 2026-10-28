@@ -38,9 +38,7 @@ class HttpHealthChecker:
 
         return StepResult(
             step_name=step_name,
-            status=(
-                StepStatus.SUCCEEDED if succeeded else StepStatus.FAILED
-            ),
+            status=(StepStatus.SUCCEEDED if succeeded else StepStatus.FAILED),
             duration_seconds=duration,
             message=f"HTTP health check returned status {status_code}.",
         )

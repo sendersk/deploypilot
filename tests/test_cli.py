@@ -1,4 +1,3 @@
-
 """Tests for the DeployPilot command-line interface."""
 
 from typer.testing import CliRunner

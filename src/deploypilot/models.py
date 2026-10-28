@@ -33,22 +33,14 @@ class DeploymentStep(BaseModel):
             if self.url is None:
                 raise ValueError("HTTP health checks require a URL.")
             if self.command is not None:
-                raise ValueError(
-                    "HTTP health checks cannot define a command."
-                )
+                raise ValueError("HTTP health checks cannot define a command.")
         else:
             if not self.command:
-                raise ValueError(
-                    f"{self.type.value} steps require a command."
-                )
+                raise ValueError(f"{self.type.value} steps require a command.")
             if any(not argument.strip() for argument in self.command):
-                raise ValueError(
-                    "Command arguments cannot be empty."
-                )
+                raise ValueError("Command arguments cannot be empty.")
             if self.url is not None:
-                raise ValueError(
-                    f"{self.type.value} steps cannot define a URL."
-                )
+                raise ValueError(f"{self.type.value} steps cannot define a URL.")
 
         return self
 

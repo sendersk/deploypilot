@@ -111,11 +111,11 @@ def test_rollback_stops_after_required_rollback_failure() -> None:
     result = WorkflowExecutor(step_executor).execute(workflow)
 
     assert result.status == WorkflowStatus.FAILED
-    assert [
-        step.status for step in result.rollback_steps
-    ] == [StepStatus.FAILED, StepStatus.SKIPPED]
+    assert [step.status for step in result.rollback_steps] == [
+        StepStatus.FAILED,
+        StepStatus.SKIPPED,
+    ]
     assert step_executor.execute.call_count == 2
-
 
 
 def test_successful_rollback_has_succeeded_status() -> None:

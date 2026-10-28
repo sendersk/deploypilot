@@ -1,4 +1,3 @@
-
 """Execute deployment workflows sequentially."""
 
 import logging
@@ -28,9 +27,7 @@ class WorkflowExecutor:
         logger.info("Starting workflow '%s'.", workflow.name)
 
         deployment_results = self._execute_steps(workflow.steps)
-        required_step_names = {
-            step.name for step in workflow.steps if step.required
-        }
+        required_step_names = {step.name for step in workflow.steps if step.required}
         deployment_result = WorkflowResult.from_step_results(
             workflow_name=workflow.name,
             steps=deployment_results,
@@ -52,10 +49,7 @@ class WorkflowExecutor:
         if rollback_results:
             rollback_status = (
                 RollbackStatus.FAILED
-                if any(
-                    step.status != StepStatus.SUCCEEDED
-                    for step in rollback_results
-                )
+                if any(step.status != StepStatus.SUCCEEDED for step in rollback_results)
                 else RollbackStatus.SUCCEEDED
             )
 
@@ -95,8 +89,7 @@ class WorkflowExecutor:
                 skipped_result = self._skipped_result(step)
                 results.append(skipped_result)
                 logger.info(
-                    "Skipping step '%s' because a previous required step "
-                    "failed.",
+                    "Skipping step '%s' because a previous required step failed.",
                     step.name,
                 )
                 continue

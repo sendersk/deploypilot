@@ -35,7 +35,6 @@ def test_execute_command_step_uses_command_runner() -> None:
     )
 
 
-
 def test_execute_http_health_check_uses_health_checker() -> None:
     """Pass HTTP health check details to the health checker."""
     step = DeploymentStep(

@@ -19,18 +19,14 @@ def load_workflow(path: Path) -> WorkflowConfig:
         with path.open("r", encoding="utf-8") as file:
             data: Any = yaml.safe_load(file)
     except OSError as exc:
-        raise WorkflowLoadError(
-            f"Unable to read workflow file: {path}"
-        ) from exc
+        raise WorkflowLoadError(f"Unable to read workflow file: {path}") from exc
     except yaml.YAMLError as exc:
         raise WorkflowLoadError(
             f"Invalid YAML syntax in workflow file: {path}"
         ) from exc
 
     if not isinstance(data, dict):
-        raise WorkflowLoadError(
-            "Workflow configuration must contain a YAML mapping."
-        )
+        raise WorkflowLoadError("Workflow configuration must contain a YAML mapping.")
 
     try:
         return WorkflowConfig.model_validate(data)

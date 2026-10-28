@@ -44,6 +44,4 @@ class StepExecutor:
                 timeout=step.timeout,
             )
 
-        raise ValueError(
-            f"Unsupported step type for execution: {step.type.value}"
-        )
+        raise ValueError(f"Unsupported step type for execution: {step.type.value}")

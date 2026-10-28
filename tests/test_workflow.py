@@ -45,9 +45,10 @@ def test_execute_runs_all_steps_after_success() -> None:
 
     assert result.workflow_name == "test-workflow"
     assert result.status == WorkflowStatus.SUCCEEDED
-    assert [
-        step.status for step in result.steps
-    ] == [StepStatus.SUCCEEDED, StepStatus.SUCCEEDED]
+    assert [step.status for step in result.steps] == [
+        StepStatus.SUCCEEDED,
+        StepStatus.SUCCEEDED,
+    ]
     assert step_executor.execute.call_count == 2
 
 
@@ -68,9 +69,7 @@ def test_execute_skips_remaining_steps_after_required_failure() -> None:
     result = WorkflowExecutor(step_executor).execute(workflow)
 
     assert result.status == WorkflowStatus.FAILED
-    assert [
-        step.status for step in result.steps
-    ] == [
+    assert [step.status for step in result.steps] == [
         StepStatus.FAILED,
         StepStatus.SKIPPED,
         StepStatus.SKIPPED,
@@ -95,9 +94,10 @@ def test_execute_continues_after_optional_failure() -> None:
     result = WorkflowExecutor(step_executor).execute(workflow)
 
     assert result.status == WorkflowStatus.SUCCEEDED
-    assert [
-        step.status for step in result.steps
-    ] == [StepStatus.FAILED, StepStatus.SUCCEEDED]
+    assert [step.status for step in result.steps] == [
+        StepStatus.FAILED,
+        StepStatus.SUCCEEDED,
+    ]
     assert step_executor.execute.call_count == 2
 
 

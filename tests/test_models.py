@@ -124,10 +124,13 @@ def test_workflow_accepts_rollback_steps() -> None:
 def test_workflow_rejects_empty_name() -> None:
     """Reject workflows with an empty name."""
     with pytest.raises(ValidationError):
-        WorkflowConfig(name=" ", steps=[
-            DeploymentStep(
-                name="deploy",
-                type=StepType.COMMAND,
-                command=["echo", "deploy"],
-            )
-        ])
+        WorkflowConfig(
+            name=" ",
+            steps=[
+                DeploymentStep(
+                    name="deploy",
+                    type=StepType.COMMAND,
+                    command=["echo", "deploy"],
+                )
+            ],
+        )

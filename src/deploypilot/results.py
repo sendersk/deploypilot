@@ -25,7 +25,6 @@ class StepResult(BaseModel):
     exit_code: int | None = None
 
 
-
 class WorkflowStatus(StrEnum):
     """Represent the overall outcome of a workflow."""
 
@@ -53,7 +52,6 @@ class WorkflowResult(BaseModel):
     status: WorkflowStatus
     duration_seconds: float = Field(ge=0)
 
-
     @classmethod
     def from_step_results(
         cls,
@@ -76,7 +74,5 @@ class WorkflowResult(BaseModel):
                 if failed_required_step
                 else WorkflowStatus.SUCCEEDED
             ),
-            duration_seconds=sum(
-                result.duration_seconds for result in steps
-            ),
+            duration_seconds=sum(result.duration_seconds for result in steps),
         )
