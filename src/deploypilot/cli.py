@@ -1,12 +1,13 @@
 """Command-line interface for DeployPilot."""
 
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, Literal
 
 import typer
 
 from deploypilot import __version__
 from deploypilot.loader import WorkflowLoadError, load_workflow
+from deploypilot.logging_config import configure_logging
 from deploypilot.results import WorkflowStatus
 from deploypilot.workflow import WorkflowExecutor
 
@@ -69,13 +70,20 @@ def validate(
     typer.echo(f"Rollback steps: {len(workflow.rollback_steps)}")
 
 
-
 @app.command()
 def run(
     workflow_file: Annotated[
         Path,
         typer.Argument(help="Path to the workflow YAML file."),
     ],
+    log_level: Annotated[
+        Literal["DEBUG", "INFO", "WARNING", "ERROR"],
+        typer.Option(
+            "--log-level",
+            case_sensitive=False,
+            help="Set the logging level.",
+        ),
+    ] = "INFO",
 ) -> None:
     """Execute a deployment workflow."""
     try:
@@ -83,6 +91,8 @@ def run(
     except WorkflowLoadError as exc:
         typer.echo(f"Error: {exc}", err=True)
         raise typer.Exit(code=1) from exc
+
+    configure_logging(log_level)
 
     result = WorkflowExecutor().execute(workflow)
 
@@ -103,9 +113,7 @@ def run(
         typer.echo("Rollback:")
         for step in result.rollback_steps:
             duration = f"{step.duration_seconds:.2f}s"
-            typer.echo(
-                f"  [{step.status.value}] {step.step_name} ({duration})"
-            )
+            typer.echo(f"  [{step.status.value}] {step.step_name} ({duration})")
             if step.message:
                 typer.echo(f"    {step.message}")
 

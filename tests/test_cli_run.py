@@ -119,3 +119,46 @@ def test_run_rejects_invalid_workflow_file(tmp_path: Path) -> None:
 
     assert response.exit_code == 1
     assert "Error:" in response.output
+
+
+def test_run_accepts_debug_log_level(tmp_path: Path, monkeypatch) -> None:
+    """Accept DEBUG as a logging level."""
+    workflow_file = create_workflow_file(tmp_path)
+    result = WorkflowResult(
+        workflow_name="test-workflow",
+        steps=[
+            StepResult(
+                step_name="test-step",
+                status=StepStatus.SUCCEEDED,
+                duration_seconds=0.1,
+            )
+        ],
+        status=WorkflowStatus.SUCCEEDED,
+        duration_seconds=0.1,
+    )
+    executor = MagicMock()
+    executor.execute.return_value = result
+    monkeypatch.setattr(
+        "deploypilot.cli.WorkflowExecutor",
+        lambda: executor,
+    )
+
+    response = runner.invoke(
+        app,
+        ["run", str(workflow_file), "--log-level", "DEBUG"],
+    )
+
+    assert response.exit_code == 0
+
+
+def test_run_rejects_unsupported_log_level(tmp_path: Path) -> None:
+    """Reject unsupported logging levels through the CLI."""
+    workflow_file = create_workflow_file(tmp_path)
+
+    response = runner.invoke(
+        app,
+        ["run", str(workflow_file), "--log-level", "TRACE"],
+    )
+
+    assert response.exit_code != 0
+    assert "TRACE" in response.output
