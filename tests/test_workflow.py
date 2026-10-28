@@ -117,6 +117,7 @@ def test_execute_returns_summary_for_empty_workflow_steps() -> None:
     assert result.steps == []
 
 
+
 def test_workflow_timeout_prevents_starting_later_steps() -> None:
     """Skip steps that have not started before the deadline."""
     workflow = WorkflowConfig(
@@ -132,7 +133,7 @@ def test_workflow_timeout_prevents_starting_later_steps() -> None:
 
     with patch(
         "deploypilot.workflow.time.monotonic",
-        side_effect=[100.0, 102.0],
+        side_effect=[100.0, 100.5, 102.0],
     ):
         result = executor.execute(workflow)
 
@@ -142,6 +143,7 @@ def test_workflow_timeout_prevents_starting_later_steps() -> None:
         StepStatus.FAILED,
     ]
     assert step_executor.execute.call_count == 1
+
 
 
 def test_workflow_rejects_non_positive_timeout() -> None:
