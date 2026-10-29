@@ -55,7 +55,7 @@ def test_run_displays_successful_workflow(
     executor.execute.return_value = result
     monkeypatch.setattr(
         "deploypilot.cli.WorkflowExecutor",
-        lambda: executor,
+        lambda **kwargs: executor,
     )
 
     response = runner.invoke(app, ["run", str(workflow_file)])
@@ -91,7 +91,7 @@ def test_run_returns_one_when_workflow_fails(
     executor.execute.return_value = result
     monkeypatch.setattr(
         "deploypilot.cli.WorkflowExecutor",
-        lambda: executor,
+        lambda **kwargs: executor,
     )
 
     response = runner.invoke(app, ["run", str(workflow_file)])
@@ -141,7 +141,7 @@ def test_run_accepts_debug_log_level(tmp_path: Path, monkeypatch) -> None:
     executor.execute.return_value = result
     monkeypatch.setattr(
         "deploypilot.cli.WorkflowExecutor",
-        lambda: executor,
+        lambda **kwargs: executor,
     )
 
     response = runner.invoke(
@@ -191,7 +191,7 @@ def test_run_writes_json_report(
     executor.execute.return_value = result
     monkeypatch.setattr(
         "deploypilot.cli.WorkflowExecutor",
-        lambda: executor,
+        lambda **kwargs: executor,
     )
 
     response = runner.invoke(
@@ -240,7 +240,7 @@ def test_run_writes_json_report_when_workflow_fails(
     executor.execute.return_value = result
     monkeypatch.setattr(
         "deploypilot.cli.WorkflowExecutor",
-        lambda: executor,
+        lambda **kwargs: executor,
     )
 
     response = runner.invoke(
@@ -277,7 +277,7 @@ def test_run_reports_json_write_error(
     executor.execute.return_value = result
     monkeypatch.setattr(
         "deploypilot.cli.WorkflowExecutor",
-        lambda: executor,
+        lambda **kwargs: executor,
     )
 
     def fail_mkdir(*args, **kwargs) -> None:
