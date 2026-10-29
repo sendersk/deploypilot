@@ -91,6 +91,12 @@ def run(
             help="Write the workflow execution summary to a JSON file.",
         ),
     ] = None,
+    timeout: float | None = typer.Option(
+        None,
+        "--timeout",
+        min=0.001,
+        help="Maximum total workflow execution time in seconds.",
+    ),
 ) -> None:
     """Execute a deployment workflow."""
     try:
@@ -101,7 +107,7 @@ def run(
 
     configure_logging(log_level)
 
-    result = WorkflowExecutor().execute(workflow)
+    result = WorkflowExecutor(timeout=timeout).execute(workflow)
 
     if output_json is not None:
         try:
