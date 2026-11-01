@@ -1,6 +1,6 @@
 """Tests for deployment rollback behavior."""
 
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 from deploypilot.models import DeploymentStep, StepType, WorkflowConfig
 from deploypilot.results import (
@@ -171,3 +171,36 @@ def test_unconfigured_rollback_has_not_required_status() -> None:
     result = WorkflowExecutor(step_executor).execute(workflow)
 
     assert result.rollback_status == RollbackStatus.NOT_REQUIRED
+
+
+def test_rollback_is_skipped_when_workflow_deadline_is_exceeded() -> None:
+    """Skip rollback steps when the global workflow deadline has expired."""
+    workflow = WorkflowConfig(
+        name="timeout-rollback-workflow",
+        steps=[make_step("deploy")],
+        rollback_steps=[make_step("rollback")],
+    )
+    step_executor = MagicMock()
+    step_executor.execute.return_value = make_result(
+        "deploy",
+        StepStatus.FAILED,
+    )
+
+    executor = WorkflowExecutor(step_executor, timeout=1.0)
+
+    with patch(
+        "deploypilot.workflow.time.monotonic",
+        side_effect=[100.0, 100.5, 102.0, 102.0, 102.0],
+    ):
+        result = executor.execute(workflow)
+
+    assert result.status == WorkflowStatus.FAILED
+    assert len(result.steps) == 1
+    assert result.steps[0].status == StepStatus.FAILED
+
+    assert len(result.rollback_steps) == 1
+    assert result.rollback_steps[0].step_name == "rollback"
+    assert result.rollback_steps[0].status == StepStatus.FAILED
+
+    assert result.rollback_status == RollbackStatus.FAILED
+    assert step_executor.execute.call_count == 1

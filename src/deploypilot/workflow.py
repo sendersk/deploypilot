@@ -51,13 +51,14 @@ class WorkflowExecutor:
 
         rollback_results: list[StepResult] = []
         if (
-            deployment_result.status == WorkflowStatus.FAILED
-            and workflow.rollback_steps
+                deployment_result.status == WorkflowStatus.FAILED
+                and workflow.rollback_steps
         ):
             logger.warning(
                 "Deployment failed for workflow '%s'; starting rollback.",
                 workflow.name,
             )
+
             rollback_results = self._execute_steps_with_deadline(
                 workflow.rollback_steps,
                 deadline,
