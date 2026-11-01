@@ -78,3 +78,18 @@ def test_step_result_rejects_unknown_fields() -> None:
             duration_seconds=0,
             unexpected_field="value",
         )
+
+
+def test_workflow_result_accepts_failure_reason() -> None:
+    """Accept an optional workflow failure reason."""
+    from deploypilot.results import WorkflowResult, WorkflowStatus
+
+    result = WorkflowResult(
+        workflow_name="test-workflow",
+        steps=[],
+        status=WorkflowStatus.FAILED,
+        duration_seconds=1.0,
+        failure_reason="Workflow timeout reached.",
+    )
+
+    assert result.failure_reason == "Workflow timeout reached."

@@ -235,6 +235,7 @@ def test_run_writes_json_report_when_workflow_fails(
         ],
         status=WorkflowStatus.FAILED,
         duration_seconds=0.1,
+        failure_reason="Deployment command failed.",
     )
     executor = MagicMock()
     executor.execute.return_value = result
@@ -257,6 +258,7 @@ def test_run_writes_json_report_when_workflow_fails(
     assert report_file.is_file()
     report = json.loads(report_file.read_text(encoding="utf-8"))
     assert report["status"] == "failed"
+    assert report["failure_reason"] == "Deployment command failed."
 
 
 def test_run_reports_json_write_error(
