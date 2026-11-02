@@ -3,7 +3,13 @@
 import pytest
 from pydantic import ValidationError
 
-from deploypilot.results import StepResult, StepStatus
+from deploypilot.results import (
+    RollbackStatus,
+    StepResult,
+    StepStatus,
+    WorkflowResult,
+    WorkflowStatus,
+)
 
 
 def test_step_result_accepts_successful_execution() -> None:
@@ -93,3 +99,83 @@ def test_workflow_result_accepts_failure_reason() -> None:
     )
 
     assert result.failure_reason == "Workflow timeout reached."
+
+
+def test_workflow_result_accepts_successful_execution() -> None:
+    """Accept a successful workflow result."""
+    result = WorkflowResult(
+        workflow_name="test-workflow",
+        steps=[
+            StepResult(
+                step_name="deploy",
+                status=StepStatus.SUCCEEDED,
+                duration_seconds=1.0,
+            )
+        ],
+        status=WorkflowStatus.SUCCEEDED,
+        duration_seconds=1.0,
+    )
+
+    assert result.workflow_name == "test-workflow"
+    assert result.status == WorkflowStatus.SUCCEEDED
+    assert result.failure_reason is None
+    assert result.rollback_status == RollbackStatus.NOT_REQUIRED
+
+
+def test_workflow_result_rejects_negative_duration() -> None:
+    """Reject a negative workflow duration."""
+    import pytest
+    from pydantic import ValidationError
+
+    with pytest.raises(ValidationError):
+        WorkflowResult(
+            workflow_name="test-workflow",
+            steps=[],
+            status=WorkflowStatus.SUCCEEDED,
+            duration_seconds=-1.0,
+        )
+
+
+def test_workflow_result_rejects_unknown_fields() -> None:
+    """Reject fields that are not part of the workflow result model."""
+    import pytest
+    from pydantic import ValidationError
+
+    with pytest.raises(ValidationError):
+        WorkflowResult(
+            workflow_name="test-workflow",
+            steps=[],
+            status=WorkflowStatus.SUCCEEDED,
+            duration_seconds=0.0,
+            unexpected_field="value",
+        )
+
+
+def test_workflow_result_accepts_rollback_results() -> None:
+    """Accept a workflow result containing successful rollback results."""
+    result = WorkflowResult(
+        workflow_name="test-workflow",
+        steps=[
+            StepResult(
+                step_name="deploy",
+                status=StepStatus.FAILED,
+                duration_seconds=1.0,
+            )
+        ],
+        rollback_steps=[
+            StepResult(
+                step_name="rollback",
+                status=StepStatus.SUCCEEDED,
+                duration_seconds=0.5,
+            )
+        ],
+        rollback_status=RollbackStatus.SUCCEEDED,
+        status=WorkflowStatus.FAILED,
+        duration_seconds=1.5,
+        failure_reason="Deployment failed.",
+    )
+
+    assert result.status == WorkflowStatus.FAILED
+    assert result.rollback_status == RollbackStatus.SUCCEEDED
+    assert len(result.rollback_steps) == 1
+    assert result.failure_reason == "Deployment failed."
