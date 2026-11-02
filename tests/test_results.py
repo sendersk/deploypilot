@@ -179,3 +179,27 @@ def test_workflow_result_accepts_rollback_results() -> None:
     assert result.rollback_status == RollbackStatus.SUCCEEDED
     assert len(result.rollback_steps) == 1
     assert result.failure_reason == "Deployment failed."
+
+
+def test_workflow_result_rejects_empty_failure_reason() -> None:
+    """Reject an empty workflow failure reason."""
+    with pytest.raises(ValidationError):
+        WorkflowResult(
+            workflow_name="test-workflow",
+            steps=[],
+            status=WorkflowStatus.FAILED,
+            duration_seconds=1.0,
+            failure_reason="",
+        )
+
+
+def test_workflow_result_rejects_whitespace_failure_reason() -> None:
+    """Reject a whitespace-only workflow failure reason."""
+    with pytest.raises(ValidationError):
+        WorkflowResult(
+            workflow_name="test-workflow",
+            steps=[],
+            status=WorkflowStatus.FAILED,
+            duration_seconds=1.0,
+            failure_reason="   ",
+        )

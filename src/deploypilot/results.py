@@ -51,7 +51,7 @@ class WorkflowResult(BaseModel):
     rollback_status: RollbackStatus = RollbackStatus.NOT_REQUIRED
     status: WorkflowStatus
     duration_seconds: float = Field(ge=0)
-    failure_reason: str | None = None
+    failure_reason: str | None = Field(default=None, min_length=1)
 
     @classmethod
     def from_step_results(
