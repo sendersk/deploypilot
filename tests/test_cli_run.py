@@ -86,6 +86,7 @@ def test_run_returns_one_when_workflow_fails(
         ],
         status=WorkflowStatus.FAILED,
         duration_seconds=0.1,
+        failure_reason="Deployment command failed.",
     )
     executor = MagicMock()
     executor.execute.return_value = result
@@ -99,6 +100,7 @@ def test_run_returns_one_when_workflow_fails(
     assert response.exit_code == 1
     assert "Status: failed" in response.stdout
     assert "[failed] test-step" in response.stdout
+    assert "Failure reason: Deployment command failed." in response.stdout
 
 
 def test_run_handles_missing_workflow_file(tmp_path: Path) -> None:

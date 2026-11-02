@@ -127,6 +127,10 @@ def run(
 
     typer.echo(f"Workflow: {result.workflow_name}")
     typer.echo(f"Status: {result.status.value}")
+
+    if result.failure_reason:
+        typer.echo(f"Failure reason: {result.failure_reason}")
+
     typer.echo(f"Duration: {result.duration_seconds:.2f}s")
 
     typer.echo("Steps:")
