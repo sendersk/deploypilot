@@ -297,3 +297,45 @@ def test_run_reports_json_write_error(
 
     assert response.exit_code == 1
     assert "Error: unable to write JSON report" in response.output
+
+
+def test_run_writes_null_failure_reason_to_json_report(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    """Write a null failure reason for a successful workflow."""
+    workflow_file = create_workflow_file(tmp_path)
+    report_file = tmp_path / "deployment.json"
+
+    result = WorkflowResult(
+        workflow_name="test-workflow",
+        steps=[
+            StepResult(
+                step_name="test-step",
+                status=StepStatus.SUCCEEDED,
+                duration_seconds=0.1,
+            )
+        ],
+        status=WorkflowStatus.SUCCEEDED,
+        duration_seconds=0.1,
+    )
+    executor = MagicMock()
+    executor.execute.return_value = result
+    monkeypatch.setattr(
+        "deploypilot.cli.WorkflowExecutor",
+        lambda **kwargs: executor,
+    )
+
+    response = runner.invoke(
+        app,
+        [
+            "run",
+            str(workflow_file),
+            "--output-json",
+            str(report_file),
+        ],
+    )
+
+    assert response.exit_code == 0
+    report = json.loads(report_file.read_text(encoding="utf-8"))
+    assert report["failure_reason"] is None
