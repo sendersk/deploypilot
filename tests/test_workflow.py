@@ -152,3 +152,33 @@ def test_workflow_rejects_non_positive_timeout() -> None:
 
     with pytest.raises(ValueError, match="greater than zero"):
         WorkflowExecutor(timeout=0)
+
+
+def test_workflow_timeout_sets_failure_reason() -> None:
+    """Set a workflow failure reason when the global timeout is reached."""
+    workflow = WorkflowConfig(
+        name="timeout-workflow",
+        steps=[
+            make_step("first"),
+            make_step("second"),
+        ],
+    )
+    step_executor = MagicMock()
+    step_executor.execute.return_value = make_result(
+        "first",
+        StepStatus.SUCCEEDED,
+    )
+
+    executor = WorkflowExecutor(step_executor, timeout=1.0)
+
+    with patch(
+        "deploypilot.workflow.time.monotonic",
+        side_effect=[100.0, 100.5, 102.0],
+    ):
+        result = executor.execute(workflow)
+
+    assert result.status == WorkflowStatus.FAILED
+    assert result.failure_reason == "Workflow timeout reached."
+    assert result.steps[0].status == StepStatus.SUCCEEDED
+    assert result.steps[1].status == StepStatus.FAILED
+    assert step_executor.execute.call_count == 1
