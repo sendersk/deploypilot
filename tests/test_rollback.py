@@ -204,3 +204,32 @@ def test_rollback_is_skipped_when_workflow_deadline_is_exceeded() -> None:
 
     assert result.rollback_status == RollbackStatus.FAILED
     assert step_executor.execute.call_count == 1
+
+
+def test_rollback_timeout_sets_workflow_failure_reason() -> None:
+    """Set a failure reason when the deadline prevents rollback execution."""
+    workflow = WorkflowConfig(
+        name="timeout-rollback-workflow",
+        steps=[make_step("deploy")],
+        rollback_steps=[make_step("rollback")],
+    )
+    step_executor = MagicMock()
+    step_executor.execute.return_value = make_result(
+        "deploy",
+        StepStatus.FAILED,
+    )
+
+    executor = WorkflowExecutor(step_executor, timeout=1.0)
+
+    with patch(
+        "deploypilot.workflow.time.monotonic",
+        side_effect=[100.0, 100.5, 102.0],
+    ):
+        result = executor.execute(workflow)
+
+    assert result.status == WorkflowStatus.FAILED
+    assert result.failure_reason == "Workflow timeout reached."
+    assert len(result.rollback_steps) == 1
+    assert result.rollback_steps[0].status == StepStatus.FAILED
+    assert result.rollback_status == RollbackStatus.FAILED
+    assert step_executor.execute.call_count == 1

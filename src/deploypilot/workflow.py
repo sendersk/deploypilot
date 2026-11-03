@@ -64,9 +64,15 @@ class WorkflowExecutor:
                 deadline,
             )
 
+        timeout_message = "Workflow timeout reached before step started."
         timeout_reached = any(
-            result.message == "Workflow timeout reached before step started."
+            result.message == timeout_message
             for result in deployment_results
+        )
+
+        timeout_reached = timeout_reached or any(
+            result.message == timeout_message
+            for result in rollback_results
         )
 
         rollback_status = RollbackStatus.NOT_REQUIRED
