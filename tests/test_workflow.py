@@ -182,3 +182,4 @@ def test_workflow_timeout_sets_failure_reason() -> None:
     assert result.steps[0].status == StepStatus.SUCCEEDED
     assert result.steps[1].status == StepStatus.FAILED
     assert step_executor.execute.call_count == 1
+

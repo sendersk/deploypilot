@@ -233,3 +233,26 @@ def test_rollback_timeout_sets_workflow_failure_reason() -> None:
     assert result.rollback_steps[0].status == StepStatus.FAILED
     assert result.rollback_status == RollbackStatus.FAILED
     assert step_executor.execute.call_count == 1
+
+
+def test_successful_rollback_does_not_change_workflow_failure_status() -> None:
+    """Keep workflow failed when rollback succeeds after deployment failure."""
+    workflow = WorkflowConfig(
+        name="successful-rollback-workflow",
+        steps=[make_step("deploy")],
+        rollback_steps=[make_step("rollback")],
+    )
+    step_executor = MagicMock()
+    step_executor.execute.side_effect = [
+        make_result("deploy", StepStatus.FAILED),
+        make_result("rollback", StepStatus.SUCCEEDED),
+    ]
+
+    result = WorkflowExecutor(step_executor).execute(workflow)
+
+    assert result.status == WorkflowStatus.FAILED
+    assert result.rollback_status == RollbackStatus.SUCCEEDED
+    assert len(result.rollback_steps) == 1
+    assert result.rollback_steps[0].status == StepStatus.SUCCEEDED
+    assert result.failure_reason is None
+    assert step_executor.execute.call_count == 2
