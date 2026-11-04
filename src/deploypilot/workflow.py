@@ -111,46 +111,6 @@ class WorkflowExecutor:
 
         return result
 
-    def _execute_steps(
-        self,
-        steps: list[DeploymentStep],
-    ) -> list[StepResult]:
-        """Execute steps sequentially, stopping after a required failure."""
-        results: list[StepResult] = []
-        stop_execution = False
-
-        for step in steps:
-            if stop_execution:
-                skipped_result = self._skipped_result(step)
-                results.append(skipped_result)
-                logger.info(
-                    "Skipping step '%s' because a previous required step failed.",
-                    step.name,
-                )
-                continue
-
-            logger.info("Starting step '%s'.", step.name)
-            result = self._step_executor.execute(step)
-            results.append(result)
-
-            if result.status == StepStatus.FAILED:
-                logger.error(
-                    "Step '%s' failed: %s",
-                    step.name,
-                    result.message or "No error details available.",
-                )
-            else:
-                logger.info(
-                    "Step '%s' finished with status '%s' in %.2f seconds.",
-                    step.name,
-                    result.status.value,
-                    result.duration_seconds,
-                )
-
-            if result.status == StepStatus.FAILED and step.required:
-                stop_execution = True
-
-        return results
 
     @staticmethod
     def _skipped_result(step: DeploymentStep) -> StepResult:
