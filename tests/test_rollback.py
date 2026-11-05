@@ -285,3 +285,33 @@ def test_rollback_skips_remaining_steps_after_required_failure() -> None:
         StepStatus.SKIPPED,
     ]
     assert step_executor.execute.call_count == 2
+
+
+def test_rollback_continues_after_optional_step_failure() -> None:
+    """Continue rollback when an optional rollback step fails."""
+    workflow = WorkflowConfig(
+        name="optional-rollback-failure-workflow",
+        steps=[make_step("deploy")],
+        rollback_steps=[
+            make_step("optional-rollback").model_copy(
+                update={"required": False}
+            ),
+            make_step("required-rollback"),
+        ],
+    )
+    step_executor = MagicMock()
+    step_executor.execute.side_effect = [
+        make_result("deploy", StepStatus.FAILED),
+        make_result("optional-rollback", StepStatus.FAILED),
+        make_result("required-rollback", StepStatus.SUCCEEDED),
+    ]
+
+    result = WorkflowExecutor(step_executor).execute(workflow)
+
+    assert result.status == WorkflowStatus.FAILED
+    assert result.rollback_status == RollbackStatus.FAILED
+    assert [step.status for step in result.rollback_steps] == [
+        StepStatus.FAILED,
+        StepStatus.SUCCEEDED,
+    ]
+    assert step_executor.execute.call_count == 3
