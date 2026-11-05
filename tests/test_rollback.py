@@ -315,3 +315,24 @@ def test_rollback_continues_after_optional_step_failure() -> None:
         StepStatus.SUCCEEDED,
     ]
     assert step_executor.execute.call_count == 3
+
+
+def test_failed_deployment_without_rollback_steps() -> None:
+    """Mark rollback as not required when no rollback steps are configured."""
+    workflow = WorkflowConfig(
+        name="no-rollback-workflow",
+        steps=[make_step("deploy")],
+        rollback_steps=[],
+    )
+    step_executor = MagicMock()
+    step_executor.execute.return_value = make_result(
+        "deploy",
+        StepStatus.FAILED,
+    )
+
+    result = WorkflowExecutor(step_executor).execute(workflow)
+
+    assert result.status == WorkflowStatus.FAILED
+    assert result.rollback_status == RollbackStatus.NOT_REQUIRED
+    assert result.rollback_steps == []
+    assert step_executor.execute.call_count == 1
