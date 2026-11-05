@@ -256,3 +256,32 @@ def test_successful_rollback_does_not_change_workflow_failure_status() -> None:
     assert result.rollback_steps[0].status == StepStatus.SUCCEEDED
     assert result.failure_reason is None
     assert step_executor.execute.call_count == 2
+
+
+def test_rollback_skips_remaining_steps_after_required_failure() -> None:
+    """Skip remaining rollback steps after a required rollback failure."""
+    workflow = WorkflowConfig(
+        name="rollback-failure-workflow",
+        steps=[make_step("deploy")],
+        rollback_steps=[
+            make_step("rollback-one"),
+            make_step("rollback-two"),
+            make_step("rollback-three"),
+        ],
+    )
+    step_executor = MagicMock()
+    step_executor.execute.side_effect = [
+        make_result("deploy", StepStatus.FAILED),
+        make_result("rollback-one", StepStatus.FAILED),
+    ]
+
+    result = WorkflowExecutor(step_executor).execute(workflow)
+
+    assert result.status == WorkflowStatus.FAILED
+    assert result.rollback_status == RollbackStatus.FAILED
+    assert [step.status for step in result.rollback_steps] == [
+        StepStatus.FAILED,
+        StepStatus.SKIPPED,
+        StepStatus.SKIPPED,
+    ]
+    assert step_executor.execute.call_count == 2
