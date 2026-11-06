@@ -368,3 +368,43 @@ def test_rollback_with_only_optional_steps_can_fail() -> None:
         StepStatus.SUCCEEDED,
     ]
     assert step_executor.execute.call_count == 3
+
+
+def test_rollback_preserves_multiple_optional_step_failures() -> None:
+    """Preserve results of multiple failed optional rollback steps."""
+    workflow = WorkflowConfig(
+        name="multiple-rollback-failures",
+        steps=[make_step("deploy")],
+        rollback_steps=[
+            make_step("rollback-one").model_copy(
+                update={"required": False}
+            ),
+            make_step("rollback-two").model_copy(
+                update={"required": False}
+            ),
+            make_step("rollback-three"),
+        ],
+    )
+    step_executor = MagicMock()
+    step_executor.execute.side_effect = [
+        make_result("deploy", StepStatus.FAILED),
+        make_result("rollback-one", StepStatus.FAILED),
+        make_result("rollback-two", StepStatus.FAILED),
+        make_result("rollback-three", StepStatus.SUCCEEDED),
+    ]
+
+    result = WorkflowExecutor(step_executor).execute(workflow)
+
+    assert result.status == WorkflowStatus.FAILED
+    assert result.rollback_status == RollbackStatus.FAILED
+    assert [step.step_name for step in result.rollback_steps] == [
+        "rollback-one",
+        "rollback-two",
+        "rollback-three",
+    ]
+    assert [step.status for step in result.rollback_steps] == [
+        StepStatus.FAILED,
+        StepStatus.FAILED,
+        StepStatus.SUCCEEDED,
+    ]
+    assert step_executor.execute.call_count == 4
